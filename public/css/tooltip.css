@@ -1,0 +1,32 @@
+/*
+ * File: tooltip.css
+ *
+ * @author Gabriel Castillo <gabriel@gabrielcastillo.net>
+ * Copyright (c) 2025.
+ */
+
+/* Tooltip container */
+/* Base tooltip style */
+.custom-tooltip {
+    position: absolute;
+    background-color: #333;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 1000;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+
+.custom-tooltip {
+    transition: opacity 0.2s, transform 0.2s;
+    transform: translateY(-5px);
+}
+
+.custom-tooltip[style*="opacity: 1"] {
+    transform: translateY(0);
+}

@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+  ~ File: .phpcs.xml
+  ~
+  ~ @author Gabriel Castillo <gabriel@gabrielcastillo.net>
+  ~ Copyright (c) 2025.
+  -->
+
+<ruleset name="My Project Rules">
+    <rule ref="WordPress" />
+
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+
+    <arg name="php-version" value="8.2"/>
+</ruleset>
