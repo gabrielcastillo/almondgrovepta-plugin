@@ -182,19 +182,6 @@ class AGPTA_Events {
 		);
 	}
 
-	public function agpta_event_admin_menus(): void {
-		add_submenu_page( $this->page_slug, __( 'PTA Event Orders', $this->plugin_name ), __( 'PTA Event Orders', $this->plugin_name ), 'manage_options', 'orders', array( $this, 'agpta_event_orders' ) );
-	}
-
-	public function agpta_remove_cpt_submenu(): void {
-		$post_type   = 'pta_events';
-		$parent_slug = 'edit.php?post_type=' . $post_type;
-
-		$submenu_slug = 'post-new.php?post_type=' . $post_type;
-
-		remove_submenu_page( $parent_slug, $submenu_slug );
-	}
-
 	public function agpta_get_pta_events() {
 		$events = get_posts(
 			array(
@@ -216,4 +203,5 @@ class AGPTA_Events {
 
 		wp_send_json( $data );
 	}
+
 }

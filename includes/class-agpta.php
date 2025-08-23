@@ -119,6 +119,8 @@ class Agpta {
 
 		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-contact-form.php';
 
+		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-wishlist.php';
+
 		/**
 		 * The class responsible for orchestrating the actions and filters of the
 		 * core plugin.
@@ -169,17 +171,16 @@ class Agpta {
 	 * @access   private
 	 */
 	private function define_admin_hooks() {
+		global $wpdb;
 
-		$plugin_admin      = new Agpta_Admin( $this->get_plugin_name(), $this->get_version() );
-		$board_members     = new AGPTA_Board_Members( $this->get_plugin_name() );
-		$principal_reports = new AGPTA_Principal_Report( $this->get_plugin_name() );
-
-		$pta_events      = new AGPTA_Events( $this->get_plugin_name() );
-		$plugin_settings = new AGPTA_Settings( $this->get_plugin_name() );
-
-		$agpta_webhooks = new AGPTA_Webhooks( $this->get_plugin_name(), $this->get_version() );
-
+		$plugin_admin       = new Agpta_Admin( $this->get_plugin_name(), $this->get_version() );
+		$board_members      = new AGPTA_Board_Members( $this->get_plugin_name() );
+		$principal_reports  = new AGPTA_Principal_Report( $this->get_plugin_name() );
+		$pta_events         = new AGPTA_Events( $this->get_plugin_name() );
+		$plugin_settings    = new AGPTA_Settings( $this->get_plugin_name() );
+		$agpta_webhooks     = new AGPTA_Webhooks( $this->get_plugin_name(), $this->get_version() );
 		$agpta_contact_form = new AGPTA_ContactForm( $this->get_plugin_name(), $this->get_version() );
+		$agpta_wishlist     = new AGPTA_Wishlist( $this->get_plugin_name(), $this->get_version(), $wpdb );
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
@@ -196,8 +197,6 @@ class Agpta {
 
 		$this->loader->add_action( 'init', $principal_reports, 'init' );
 		$this->loader->add_action( 'init', $pta_events, 'init' );
-		$this->loader->add_action( 'admin_menu', $pta_events, 'agpta_event_admin_menus' );
-		$this->loader->add_action( 'admin_menu', $pta_events, 'agpta_remove_cpt_submenu' );
 
 		$this->loader->add_action( 'admin_menu', $plugin_settings, 'agpta_admin_menu_settings_page_init' );
 		$this->loader->add_action( 'admin_init', $plugin_settings, 'agpta_settings_init' );
@@ -216,6 +215,9 @@ class Agpta {
 		$this->loader->add_action( 'admin_post_nopriv_agpta_contact_form', $agpta_contact_form, 'agpta_contact_form_submission' );
 
 		$this->loader->add_shortcode( 'agpta_contact_form', $agpta_contact_form, 'contact_form_display_shortcode' );
+
+		$this->loader->add_action( 'admin_menu', $agpta_wishlist, 'agpta_wishlist_admin_page_init' );
+		$this->loader->add_action( 'admin_post_agpta_wishlist_add_new', $agpta_wishlist, 'agpta_wishlist_add_new_handler' );
 	}
 
 	/**

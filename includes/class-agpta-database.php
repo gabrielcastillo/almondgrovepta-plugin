@@ -82,14 +82,15 @@ class AGPTA_Database {
 	}
 
 	public function agpta_create_contact_form_table() {
-		global $wpdb;
 
-		$table_name = $wpdb->prefix . 'agpta_contact_form_entries';
-		$charset_collate = $wpdb->get_charset_collate();
+		$table_name      = $this->db->prefix . 'agpta_contact_form_entries';
+		$charset_collate = $this->db->get_charset_collate();
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-		$sql = "CREATE TABLE {$table_name} (
+
+		$sql = /** @lang SQL */
+			"CREATE TABLE {$table_name} (
 			id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
 			name VARCHAR(255) NOT NULL,
 			email VARCHAR(255) NOT NULL,
@@ -97,6 +98,26 @@ class AGPTA_Database {
 			status VARCHAR(50) NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (id)
+		) $charset_collate;";
+
+		dbDelta( $sql );
+	}
+
+	public function agpta_create_wishlist_table() {
+
+		$table_name = $this->db->prefix . 'agpta_wishlists';
+		$charset_collate = $this->db->get_charset_collate();
+
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+		$sql = "CREATE TABLE {$table_name} (
+    		id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+    		name VARCHAR(100) NOT NULL,
+    		url VARCHAR(255) NOT NULL,
+    		location VARCHAR(100) DEFAULT '',
+    		description TEXT DEFAULT '',
+    		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    		PRIMARY KEY ( id )
 		) $charset_collate;";
 
 		dbDelta( $sql );

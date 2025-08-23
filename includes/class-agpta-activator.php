@@ -37,6 +37,7 @@ class Agpta_Activator {
 		$database->agpta_create_stripe_customer_table();
 		$database->agpta_create_stripe_customer_transaction_table();
 		$database->agpta_create_contact_form_table();
+		$database->agpta_create_wishlist_table();
 
 	}
 
