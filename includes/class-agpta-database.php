@@ -15,7 +15,7 @@ class AGPTA_Database {
 	public function __construct() {
 		global $wpdb;
 
-		$this->db = $wpdb;
+		$this->db              = $wpdb;
 		$this->charset_collate = $this->db->get_charset_collate();
 	}
 
@@ -37,7 +37,7 @@ class AGPTA_Database {
 		dbDelta( $sql );
 	}
 
-	public function agpta_create_stripe_customer_table() :void {
+	public function agpta_create_stripe_customer_table(): void {
 		$tablename = $this->db->prefix . 'agpta_stripe_customer';
 
 		$sql = /** @lang sql */
@@ -49,16 +49,15 @@ class AGPTA_Database {
 			PRIMARY KEY (customer_id)
 			) $this->charset_collate;";
 
-
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 		dbDelta( $sql );
 	}
 
-	public function agpta_create_stripe_customer_transaction_table() :void {
+	public function agpta_create_stripe_customer_transaction_table(): void {
 		$tablename = $this->db->prefix . 'agpta_stripe_transaction';
 
-		$sql = /** @lang sql */
+		$sql = /** @lang SQL */
 		"CREATE TABLE IF NOT EXISTS $tablename (
 		transaction_id INT(11) NOT NULL AUTO_INCREMENT,
 		customer_id INT(11) NOT NULL,
@@ -88,7 +87,6 @@ class AGPTA_Database {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-
 		$sql = /** @lang SQL */
 			"CREATE TABLE {$table_name} (
 			id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -105,7 +103,7 @@ class AGPTA_Database {
 
 	public function agpta_create_wishlist_table() {
 
-		$table_name = $this->db->prefix . 'agpta_wishlists';
+		$table_name      = $this->db->prefix . 'agpta_wishlists';
 		$charset_collate = $this->db->get_charset_collate();
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -122,5 +120,4 @@ class AGPTA_Database {
 
 		dbDelta( $sql );
 	}
-
 }

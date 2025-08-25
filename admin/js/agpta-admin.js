@@ -84,10 +84,63 @@
 			$( formController.$loader ).fadeOut();
 		}
 	};
+	const wishlistController = {
+		init: function() {
+			wishlistController.cacheDom();
+			wishlistController.bindEvents();
+		},
+
+		cacheDom: function() {
+			this.$body 		= $('body');
+			this.$deleteBtn = this.$body.find('#delete-wishlist');
+		},
+
+		bindEvents: function() {
+			this.$deleteBtn.on('click', this.handleDeleteRequest.bind(this) );
+		},
+
+		handleDeleteRequest: function(e) {
+			e.preventDefault();
+
+			let wishlistId = $(e.target).data('id');
+
+			if ( typeof(wishlistId) !== 'number'  ) {
+				alert('Wishlist ID must be a valid number.');
+			}
+
+			if ( confirm('Are you sure you want to delete this wishlist?') ) {
+				$.ajax({
+					url: agpta_ajax_params.ajaxurl,
+					type: 'POST',
+					data: {
+						action: 'agpta_wishlist_delete',
+						nonce: agpta_ajax_params.ajaxnonce,
+						id: wishlistId,
+					},
+					success: function( response ) {
+
+						if ( response.success == true ) {
+							window.location.href = '/wp-admin/admin.php?page=agpta-wishlists';
+						}
+					},
+					error: function( response ) {
+						let html = '<div class="notice notice-error is-dismissible"><p>' + response.responseJSON.data.message +'</p>';
+						$('#wpbody-content').prepend(html);
+						jQuery(document).on('click', '.is-dismissible', function () {
+							jQuery(this).closest('.notice').remove();
+						});
+					}
+				});
+			}
+		},
+	};
 
 	$( document ).ready(
 		function () {
 			formController.init();
+			wishlistController.init();
 		}
 	);
 })( jQuery, document, window );
+
+

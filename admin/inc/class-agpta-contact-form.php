@@ -45,6 +45,7 @@ final class AGPTA_ContactForm {
 
 	public function load_admin_scripts() {
 
+        // @TODO: need to load this script on contact form admin page only.
 		wp_enqueue_script( 'jquery-ui-dialog' );
 		wp_enqueue_style( 'jquery-ui-style', 'https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css', false, '1.12.1' );
 

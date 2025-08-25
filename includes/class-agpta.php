@@ -184,6 +184,7 @@ class Agpta {
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
+		$this->loader->add_action( 'admin_notices', $plugin_admin, 'agpta_admin_notices' );
 
 		$this->loader->add_action( 'init', $board_members, 'init' );
 		$this->loader->add_action( 'add_meta_boxes', $board_members, 'agpta_team_meta_box_init' );
@@ -216,8 +217,11 @@ class Agpta {
 
 		$this->loader->add_shortcode( 'agpta_contact_form', $agpta_contact_form, 'contact_form_display_shortcode' );
 
-		$this->loader->add_action( 'admin_menu', $agpta_wishlist, 'agpta_wishlist_admin_page_init' );
+		$this->loader->add_action( 'admin_menu', $agpta_wishlist, 'agpta_wishlist_admin_page_init', 99);
 		$this->loader->add_action( 'admin_post_agpta_wishlist_add_new', $agpta_wishlist, 'agpta_wishlist_add_new_handler' );
+		$this->loader->add_action( 'admin_post_agpta_wishlist_edit', $agpta_wishlist, 'agpta_wishlist_edit_handler' );
+		$this->loader->add_action( 'wp_ajax_agpta_wishlist_delete', $agpta_wishlist, 'agpta_wishlist_delete_handler' );
+		$this->loader->add_shortcode( 'agpta_wishlist_list', $agpta_wishlist, 'agpta_wishlist_display_shortcode' );
 	}
 
 	/**

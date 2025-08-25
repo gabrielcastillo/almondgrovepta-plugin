@@ -95,5 +95,38 @@ class Agpta_Admin {
 		 */
 
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/agpta-admin.js', array( 'jquery' ), $this->version, false );
+
+		wp_localize_script(
+			$this->plugin_name,
+			'agpta_ajax_params',
+			array(
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'ajaxnonce'   => wp_create_nonce( $this->plugin_name . '_nonce' ),
+			)
+		);
+	}
+
+
+	public function agpta_admin_notices() {
+
+		if ( ! isset( $_GET['status'], $_GET['message'] ) ) {
+			return;
+		}
+
+		$status  = sanitize_key( $_GET['status'] );
+		$message = esc_html( urldecode( $_GET['message'] ) );
+
+		$class = match ( $status ) {
+			'success' => 'notice-success',
+			'error' => 'notice-error',
+			'warning' => 'notice-warning',
+			default => 'notice-info',
+		};
+
+		printf(
+			'<div class="notice %1$s is-dismissible"><p>%2$s</p></div>',
+			esc_attr( $class ),
+			$message
+		);
 	}
 }
