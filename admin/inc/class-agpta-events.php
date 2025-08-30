@@ -61,7 +61,7 @@ class AGPTA_Events {
 
 		wp_nonce_field( 'agpta_save_event_price', 'agpta_event_price_nonce' );
 		$value = get_post_meta( $post->ID, '_agpta_event_price', true );
-		$value = ($value) ? number_format($value, 2) : '';
+		$value = ( $value ) ? number_format( $value, 2 ) : '';
 		echo '<label for="agpta_event_price_field">';
 		echo '<input type="text" class="all-options" id="agpta_event_price_field" name="agpta_event_price_field" value="' . esc_attr( $value ) . '" placeholder="$0.00" />';
 		echo '</label>';

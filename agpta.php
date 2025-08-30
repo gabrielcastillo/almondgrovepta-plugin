@@ -78,6 +78,10 @@ require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
  */
 function run_agpta() {
 
+	if ( ! session_id() ) {
+		session_start();
+	}
+
 	$plugin = new Agpta();
 	$plugin->run();
 

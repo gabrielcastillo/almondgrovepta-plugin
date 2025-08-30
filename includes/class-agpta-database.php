@@ -120,4 +120,28 @@ class AGPTA_Database {
 
 		dbDelta( $sql );
 	}
+
+
+
+	function agpta_create_transactions_table() {
+		global $wpdb;
+		$table = $wpdb->prefix . 'ticket_transactions';
+
+		$charset_collate = $wpdb->get_charset_collate();
+
+		$sql = "CREATE TABLE $table (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+        user_email VARCHAR(255) NOT NULL,
+        event_ids LONGTEXT NOT NULL,
+        total_amount DECIMAL(10,2) NOT NULL,
+        transaction_id VARCHAR(255) NOT NULL,
+        status VARCHAR(50) NOT NULL,
+        customer_id VARCHAR(255) DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id)
+    ) $charset_collate;";
+
+		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+		dbDelta( $sql );
+	}
 }

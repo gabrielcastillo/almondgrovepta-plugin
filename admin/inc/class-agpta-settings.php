@@ -161,6 +161,8 @@ class AGPTA_Settings {
 		$test_public_key = ( isset( $this->options['test_public_key'] ) ) ? esc_html( $this->options['test_public_key'] ) : '';
 		$test_secret_key = ( isset( $this->options['test_secret_key'] ) ) ? esc_html( $this->options['test_secret_key'] ) : '';
 
+        $webhook_secret  = ( isset( $this->options['webhook_secret'] ) ) ? esc_html( $this->options['webhook_secret'] ) : '';
+
 		$enable_test_mode = ( isset( $this->options['enable_stripe_test'] ) ) ? esc_html( $this->options['enable_stripe_test'] ) : '';
 
 		$is_checked = ( (int) $enable_test_mode === 1 ) ? 'checked="checked"' : '';
@@ -189,6 +191,10 @@ class AGPTA_Settings {
 		$html .= '<tr>
                             <td><label>Test Secret Key</label></td>
                             <td><input type="text" name="agpta_settings[test_secret_key]" value="'. $test_secret_key .'" /></td>
+                          </tr>';
+		$html .= '<tr>
+                            <td><label>Webhook Secret Key</label></td>
+                            <td><input type="text" name="agpta_settings[webhook_secret]" value="'. $webhook_secret .'" /></td>
                           </tr>';
 		$html .= '</tbody>';
 		$html .= '</table>';

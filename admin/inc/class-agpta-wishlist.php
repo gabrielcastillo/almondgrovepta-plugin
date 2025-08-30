@@ -528,7 +528,7 @@ class AGPTA_Wishlist {
 
         ob_start();
         ?>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <?php foreach( $results as $result ): ?>
             <div class="bg-white shadow rouned-lg p-6 border border-gray-200">
                 <h3 class="text-xl font-semibold text-gray-800 mb-2">
@@ -541,7 +541,7 @@ class AGPTA_Wishlist {
                     <?php echo nl2br($result['description']); ?>
                 </p>
                 <?php if ( ! empty( $result['url'] ) ): ?>
-                <a href="<?php echo esc_url( $result['url'] ); ?>" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-blue-200 hover:underline">
+                <a href="<?php echo esc_url( $result['url'] ); ?>" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-red-700 hover:underline">
                     Visit Wishlist
                 </a>
                 <?php endif; ?>

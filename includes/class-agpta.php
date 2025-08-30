@@ -78,7 +78,6 @@ class Agpta {
 		$this->set_locale();
 		$this->define_admin_hooks();
 		$this->define_public_hooks();
-		$this->start_user_session();
 	}
 
 	/**
@@ -120,6 +119,10 @@ class Agpta {
 		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-contact-form.php';
 
 		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-wishlist.php';
+
+		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-stripe.php';
+
+		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-shopping-cart.php';
 
 		/**
 		 * The class responsible for orchestrating the actions and filters of the
@@ -173,14 +176,16 @@ class Agpta {
 	private function define_admin_hooks() {
 		global $wpdb;
 
-		$plugin_admin       = new Agpta_Admin( $this->get_plugin_name(), $this->get_version() );
-		$board_members      = new AGPTA_Board_Members( $this->get_plugin_name() );
-		$principal_reports  = new AGPTA_Principal_Report( $this->get_plugin_name() );
-		$pta_events         = new AGPTA_Events( $this->get_plugin_name() );
-		$plugin_settings    = new AGPTA_Settings( $this->get_plugin_name() );
-		$agpta_webhooks     = new AGPTA_Webhooks( $this->get_plugin_name(), $this->get_version() );
-		$agpta_contact_form = new AGPTA_ContactForm( $this->get_plugin_name(), $this->get_version() );
-		$agpta_wishlist     = new AGPTA_Wishlist( $this->get_plugin_name(), $this->get_version(), $wpdb );
+		$plugin_admin        = new Agpta_Admin( $this->get_plugin_name(), $this->get_version() );
+		$board_members       = new AGPTA_Board_Members( $this->get_plugin_name() );
+		$principal_reports   = new AGPTA_Principal_Report( $this->get_plugin_name() );
+		$pta_events          = new AGPTA_Events( $this->get_plugin_name() );
+		$plugin_settings     = new AGPTA_Settings( $this->get_plugin_name() );
+		$agpta_webhooks      = new AGPTA_Webhooks( $this->get_plugin_name(), $this->get_version() );
+		$agpta_contact_form  = new AGPTA_ContactForm( $this->get_plugin_name(), $this->get_version() );
+		$agpta_wishlist      = new AGPTA_Wishlist( $this->get_plugin_name(), $this->get_version(), $wpdb );
+		$agpta_stripe        = new Agpta_Stripe( $this->get_plugin_name(), $this->get_version() );
+		$agpta_shopping_cart = new AGPTA_ShoppingCart( $this->get_plugin_name(), $this->get_version(), $wpdb );
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
@@ -202,10 +207,20 @@ class Agpta {
 		$this->loader->add_action( 'admin_menu', $plugin_settings, 'agpta_admin_menu_settings_page_init' );
 		$this->loader->add_action( 'admin_init', $plugin_settings, 'agpta_settings_init' );
 
+
 		$this->loader->add_action( 'add_meta_boxes', $pta_events, 'add_event_price_meta_box' );
 		$this->loader->add_action( 'save_post', $pta_events, 'agpta_save_event_price_meta' );
 		$this->loader->add_action( 'save_post', $pta_events, 'agpta_save_event_date_meta' );
 		$this->loader->add_action( 'save_post', $pta_events, 'agpta_save_event_status_meta' );
+
+
+		$this->loader->add_action( 'admin_post_agpta_add_ticket_to_cart', $agpta_shopping_cart, 'agpta_handle_add_ticket_to_cart' );
+		$this->loader->add_action( 'admin_post_nopriv_agpta_add_ticket_to_cart', $agpta_shopping_cart, 'agpta_handle_add_ticket_to_cart' );
+		$this->loader->add_action( 'admin_post_agpta_update_cart_items', $agpta_shopping_cart, 'agpta_update_cart_items' );
+		$this->loader->add_action( 'admin_post_nopriv_agpta_update_cart_items', $agpta_shopping_cart, 'agpta_update_cart_items' );
+		$this->loader->add_shortcode( 'agpta_cart_page', $agpta_shopping_cart, 'agpta_display_cart_page' );
+		$this->loader->add_shortcode('agpta_checkout_page', $agpta_shopping_cart, 'agpta_display_checkout_page');
+		$this->loader->add_shortcode( 'agpta_add_to_cart', $agpta_shopping_cart, 'agpta_add_to_cart_shortcode' );
 
 		$this->loader->add_action( 'init', $agpta_webhooks, 'init' );
 
@@ -214,14 +229,25 @@ class Agpta {
 		$this->loader->add_action( 'wp_ajax_get_form_message_ajax_call', $agpta_contact_form, 'get_form_message_ajax_callback' );
 		$this->loader->add_action( 'admin_post_agpta_contact_form', $agpta_contact_form, 'agpta_contact_form_submission' );
 		$this->loader->add_action( 'admin_post_nopriv_agpta_contact_form', $agpta_contact_form, 'agpta_contact_form_submission' );
-
 		$this->loader->add_shortcode( 'agpta_contact_form', $agpta_contact_form, 'contact_form_display_shortcode' );
+
 
 		$this->loader->add_action( 'admin_menu', $agpta_wishlist, 'agpta_wishlist_admin_page_init', 99);
 		$this->loader->add_action( 'admin_post_agpta_wishlist_add_new', $agpta_wishlist, 'agpta_wishlist_add_new_handler' );
 		$this->loader->add_action( 'admin_post_agpta_wishlist_edit', $agpta_wishlist, 'agpta_wishlist_edit_handler' );
 		$this->loader->add_action( 'wp_ajax_agpta_wishlist_delete', $agpta_wishlist, 'agpta_wishlist_delete_handler' );
 		$this->loader->add_shortcode( 'agpta_wishlist_list', $agpta_wishlist, 'agpta_wishlist_display_shortcode' );
+
+
+		$this->loader->add_action( 'init', $agpta_stripe, 'agpta_stripe_init' );
+		$this->loader->add_action( 'admin_post_agpta_create_stripe_checkout_session', $agpta_stripe, 'agpta_create_stripe_checkout_session' );
+		$this->loader->add_action( 'admin_post_nopriv_agpta_create_stripe_checkout_session', $agpta_stripe, 'agpta_create_stripe_checkout_session' );
+		$this->loader->add_shortcode( 'agpta_stripe_thank_you', $agpta_stripe, 'agpta_thank_you_page_display' );
+		$this->loader->add_action( 'rest_api_init', $agpta_stripe, 'agpta_register_webhook_route' );
+
+
+
+
 	}
 
 	/**
@@ -277,11 +303,5 @@ class Agpta {
 	 */
 	public function get_version() {
 		return $this->version;
-	}
-
-	public function start_user_session() {
-		if ( ! session_id() ) {
-			session_start();
-		}
 	}
 }
