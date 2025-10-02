@@ -33,7 +33,6 @@ class AGPTA_Stripe {
 	}
 
 	public function agpta_stripe_init() {
-
 	}
 
 	public function agpta_create_stripe_checkout_session() {
@@ -66,10 +65,10 @@ class AGPTA_Stripe {
 			$checkout_session = \Stripe\Checkout\Session::create(
 				array(
 					'payment_method_types' => array( 'card' ),
-					'line_items'            => $line_items,
-					'mode'                  => 'payment',
-					'success_url'           => home_url( '/checkout/thank-you?session_id={CHECKOUT_SESSION_ID}' ),
-					'cancel_url'            => home_url( '/cart' ),
+					'line_items'           => $line_items,
+					'mode'                 => 'payment',
+					'success_url'          => home_url( '/checkout/thank-you?session_id={CHECKOUT_SESSION_ID}' ),
+					'cancel_url'           => home_url( '/cart' ),
 				)
 			);
 
@@ -99,7 +98,7 @@ class AGPTA_Stripe {
 		);
 	}
 
-	public function agpta_handle_stripe_webhook( $request ) {
+	public function agpta_handle_stripe_webhook( $request ): WP_Error|WP_REST_Response|WP_HTTP_Response {
 		$payload         = $request->get_body();
 		$sig_header      = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
 		$endpoint_secret = $this->options['webhook_secret'];
@@ -116,9 +115,9 @@ class AGPTA_Stripe {
 
 		if ( $event->type === 'checkout.session.completed' ) {
 			$this->handle_successful_payment( $event );
-		} elseif ( $event->type === 'payment_intent.payment_failed') {
-            $this->handle_failed_payment($event);
-        }
+		} elseif ( $event->type === 'payment_intent.payment_failed' ) {
+			$this->handle_failed_payment( $event );
+		}
 
 		return rest_ensure_response( array( 'status' => 'success' ) );
 	}
@@ -145,7 +144,6 @@ class AGPTA_Stripe {
 
 		// You can now save the transaction info in the database
 		$this->save_transaction_data( $session );
-
 	}
 
 	public function save_transaction_data( $session, $line_items ) {
@@ -160,7 +158,7 @@ class AGPTA_Stripe {
 					'amount'   => $item->amount_total / 100,
 				);
 			}
-        }
+		}
 
 		$wpdb->insert(
 			"{$wpdb->prefix}ticket_transactions",
