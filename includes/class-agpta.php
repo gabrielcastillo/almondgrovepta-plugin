@@ -123,6 +123,9 @@ class Agpta {
 		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-stripe.php';
 
 		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-shopping-cart.php';
+		
+		
+		require_once plugin_dir_path( __DIR__ ) . 'public/includes/shortcodes.php';
 
 		/**
 		 * The class responsible for orchestrating the actions and filters of the
