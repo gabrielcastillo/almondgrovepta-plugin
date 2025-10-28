@@ -5,10 +5,12 @@
 
 
 #sidebar .image {
-    margin:0 auto;
+	margin:0 auto;
 }
 
 div.principal-report {
-    border: 1px solid #999999;
-    border-radius: .45rem;
+	border: 1px solid #999999;
+	border-radius: .45rem;
+	height: 100%;
+	display:block;
 }

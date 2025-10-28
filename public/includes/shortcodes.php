@@ -8,44 +8,45 @@
 
 
 function display_first_principal_report() {
-	global $wpdb;
-	$tablename = $wpdb->prefix . 'posts';
 
-	$sql = /** @lang sql */
-		"SELECT * FROM {$tablename}
-		WHERE post_type = 'principal_report'
-		AND post_status = 'publish'
-		ORDER BY post_date DESC
-		LIMIT 1";
+	$args = array(
+		'post_type'      => 'principal_report',
+		'post_status'    => 'publish',
+		'posts_per_page' => 1,
+		'orderby'        => 'post_date',
+		'order'          => 'DESC',
+	);
 
-	$results = $wpdb->get_results( $sql );
+	$reports = get_posts( $args );
 
-	if ( ! empty( $results ) ) {
-		$post    = $results[0];
-		$title   = get_the_title( $post->ID );
-		$date    = get_the_date( '', $post->ID );
-		$content = wp_strip_all_tags( apply_filters( 'the_content', $post->post_content ) );
-		$excerpt = mb_substr( $content, 0, 200 );
+	$report = ! empty( $reports ) ? $reports[0] : null;
 
-		// Avoid cutting mid-word
+	if ( ! empty( $report ) ) {
+
+		$title   = get_the_title( $report->ID );
+		$date    = get_the_date( '', $report->ID );
+		$content = wp_strip_all_tags( apply_filters( 'the_content', $report->post_content ) );
+		$excerpt = wp_trim_words( $content, 60, '...' );
+
+		// Avoid cutting mid-word.
 		if ( mb_strlen( $content ) > 200 ) {
 			$excerpt = preg_replace( '/\s+?(\S+)?$/', '', $excerpt ) . '...';
 		}
 
-		$permalink = get_permalink( $post->ID );
+		$permalink = get_permalink( $report->ID );
 
 		$output  = '<div class="principal-report">';
 		$output .= '<h2><a href="' . esc_url( $permalink ) . '">' . esc_html( $title ) . '</a></h2>';
-		$output .= '<p class="report-date">' . esc_html( $date ) . '</p>';
+		$output .= '<span class="report-date">' . esc_html( $date ) . '</span>';
 		$output .= '<p>' . esc_html( $excerpt ) . '</p>';
-		$output .= '<a href="' . esc_url( $permalink ) . '">Read more</a>';
+		$output .= '<a class="button-default-red" href="' . esc_url( $permalink ) . '">Read more</a>';
 		$output .= '</div>';
 
 		return $output;
 
-	} else {
-		return 'No principal report found.';
 	}
+
+	return 'No principal report found.';
 }
 
 	add_shortcode( 'principal_report_single', 'display_first_principal_report' );
