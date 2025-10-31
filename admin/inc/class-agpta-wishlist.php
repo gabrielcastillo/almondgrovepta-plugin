@@ -44,7 +44,14 @@ class AGPTA_Wishlist {
 	 */
 	private string $tablename;
 
-	public function __construct( $plugin_name, $plugin_version, $wpdb ) {
+	/**
+	 * Constructor
+	 *
+	 * @param  string $plugin_name     Plugin name passed from parent class.
+	 * @param  string $plugin_version  Plugin version passed from parent class.
+	 * @param  object $wpdb            Passed from parent class.
+	 */
+	public function __construct( string $plugin_name, string $plugin_version, object $wpdb ) {
 		$this->plugin_name    = $plugin_name;
 		$this->plugin_version = $plugin_version;
 		$this->db             = $wpdb;
@@ -57,10 +64,10 @@ class AGPTA_Wishlist {
 	 *
 	 * @return void
 	 */
-	public function agpta_wishlist_admin_page_init() {
+	public function agpta_wishlist_admin_page_init(): void {
 		add_menu_page(
-			__( 'Wishlists', $this->plugin_name ),
-			__( 'Wishlists', $this->plugin_name ),
+			__( 'Wishlists', 'agpta_wishlists' ),
+			__( 'Wishlists', 'agpta_wishlists' ),
 			'manage_options',
 			$this->page_slug,
 			array( $this, 'agpta_wishlist_admin_page_callback' ),
@@ -70,8 +77,8 @@ class AGPTA_Wishlist {
 
 		add_submenu_page(
 			$this->page_slug,
-			__( 'Add Wishlist', $this->plugin_name ),
-			__( 'Add Wishlist', $this->plugin_name ),
+			__( 'Add Wishlist', 'agpta_wishlists' ),
+			__( 'Add Wishlist', 'agpta_wishlists' ),
 			'manage_options',
 			$this->page_slug . '-new',
 			array( $this, 'agpta_wishlist_add_new_admin_page_callback' ),
@@ -80,8 +87,8 @@ class AGPTA_Wishlist {
 
 		add_submenu_page(
 			'_null_dev',
-			__( 'Edit Wishlist', $this->plugin_name ),
-			__( 'Edit Wishlist', $this->plugin_name ),
+			__( 'Edit Wishlist', 'agpta_wishlists' ),
+			__( 'Edit Wishlist', 'agpta_wishlists' ),
 			'manage_options',
 			$this->page_slug . '-edit',
 			array( $this, 'agpta_wishlist_edit_admin_page_callback' ),
@@ -94,7 +101,7 @@ class AGPTA_Wishlist {
 	 *
 	 * @return void
 	 */
-	public function agpta_wishlist_admin_page_callback() {
+	public function agpta_wishlist_admin_page_callback(): void {
 		echo '<h1>Staff Wishlists</h1>';
 		echo '<p>Manage staff wishlists</p>';
 
@@ -129,11 +136,11 @@ class AGPTA_Wishlist {
 						)
 					);
 					?>
-									"><?php echo $result->id; ?></a></td>
-					<td><?php echo $result->name; ?></td>
-					<td><?php echo $result->location; ?></td>
-					<td><?php echo $result->url; ?></td>
-					<td><?php echo $result->created_at; ?></td>
+									"><?php echo esc_html( $result->id ); ?></a></td>
+					<td><?php echo esc_html( $result->name ); ?></td>
+					<td><?php echo esc_html( $result->location ); ?></td>
+					<td><?php echo esc_url( $result->url ); ?></td>
+					<td><?php echo esc_html( $result->created_at ); ?></td>
 				</tr>
 				<?php endforeach; ?>
 				</tbody>
@@ -515,41 +522,42 @@ class AGPTA_Wishlist {
 	}
 
 	/**
-     * Display wishlist content via shortcode.
+	 * Display wishlist content via shortcode.
+	 *
 	 * @return void
 	 */
 	public function agpta_wishlist_display_shortcode() {
 
-        $results = $this->db->get_results( "SELECT * FROM {$this->tablename} ORDER BY created_at DESC", ARRAY_A );
+		$results = $this->db->get_results( "SELECT * FROM {$this->tablename} ORDER BY created_at DESC", ARRAY_A );
 
-        if ( empty( $results ) ) {
-            return '<p class="text-gray-600">No wishlists found.</p>';
-        }
+		if ( empty( $results ) ) {
+			return '<p class="text-gray-600">No wishlists found.</p>';
+		}
 
-        ob_start();
-        ?>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <?php foreach( $results as $result ): ?>
-            <div class="bg-white shadow rouned-lg p-6 border border-gray-200">
-                <h3 class="text-xl font-semibold text-gray-800 mb-2">
-                    <?php echo esc_html( $result['name'] ); ?>
-                </h3>
-                <p class="text-sm text-gray-500 mb-1">
-                    <strong>Location:</strong> <?php echo esc_html( $result['location'] ); ?>
-                </p>
-                <p class="text-sm text-gray-700 mb-3">
-                    <?php echo nl2br($result['description']); ?>
-                </p>
-                <?php if ( ! empty( $result['url'] ) ): ?>
-                <a href="<?php echo esc_url( $result['url'] ); ?>" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-red-700 hover:underline">
-                    Visit Wishlist
-                </a>
-                <?php endif; ?>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php
-        //return clean output buffer with ob_get_clean()
-        return ob_get_clean();
+		ob_start();
+		?>
+		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			<?php foreach ( $results as $result ) : ?>
+			<div class="bg-white shadow rouned-lg p-6 border border-gray-200">
+				<h3 class="text-xl font-semibold text-gray-800 mb-2">
+					<?php echo esc_html( $result['name'] ); ?>
+				</h3>
+				<p class="text-sm text-gray-500 mb-1">
+					<strong>Location:</strong> <?php echo esc_html( $result['location'] ); ?>
+				</p>
+				<p class="text-sm text-gray-700 mb-3">
+					<?php echo nl2br( $result['description'] ); ?>
+				</p>
+				<?php if ( ! empty( $result['url'] ) ) : ?>
+				<a href="<?php echo esc_url( $result['url'] ); ?>" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-red-700 hover:underline">
+					Visit Wishlist
+				</a>
+				<?php endif; ?>
+			</div>
+			<?php endforeach; ?>
+		</div>
+		<?php
+		// return clean output buffer with ob_get_clean()
+		return ob_get_clean();
 	}
 }
