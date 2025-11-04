@@ -123,8 +123,7 @@ class Agpta {
 		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-stripe.php';
 
 		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-shopping-cart.php';
-		
-		
+
 		require_once plugin_dir_path( __DIR__ ) . 'public/includes/shortcodes.php';
 
 		/**
@@ -193,6 +192,7 @@ class Agpta {
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 		$this->loader->add_action( 'admin_notices', $plugin_admin, 'agpta_admin_notices' );
+		$this->loader->add_action( 'admin_init', $plugin_admin, 'agpta_wishlist_edit_page_verification_check' );
 
 		$this->loader->add_action( 'init', $board_members, 'init' );
 		$this->loader->add_action( 'add_meta_boxes', $board_members, 'agpta_team_meta_box_init' );
@@ -210,19 +210,17 @@ class Agpta {
 		$this->loader->add_action( 'admin_menu', $plugin_settings, 'agpta_admin_menu_settings_page_init' );
 		$this->loader->add_action( 'admin_init', $plugin_settings, 'agpta_settings_init' );
 
-
 		$this->loader->add_action( 'add_meta_boxes', $pta_events, 'add_event_price_meta_box' );
 		$this->loader->add_action( 'save_post', $pta_events, 'agpta_save_event_price_meta' );
 		$this->loader->add_action( 'save_post', $pta_events, 'agpta_save_event_date_meta' );
 		$this->loader->add_action( 'save_post', $pta_events, 'agpta_save_event_status_meta' );
-
 
 		$this->loader->add_action( 'admin_post_agpta_add_ticket_to_cart', $agpta_shopping_cart, 'agpta_handle_add_ticket_to_cart' );
 		$this->loader->add_action( 'admin_post_nopriv_agpta_add_ticket_to_cart', $agpta_shopping_cart, 'agpta_handle_add_ticket_to_cart' );
 		$this->loader->add_action( 'admin_post_agpta_update_cart_items', $agpta_shopping_cart, 'agpta_update_cart_items' );
 		$this->loader->add_action( 'admin_post_nopriv_agpta_update_cart_items', $agpta_shopping_cart, 'agpta_update_cart_items' );
 		$this->loader->add_shortcode( 'agpta_cart_page', $agpta_shopping_cart, 'agpta_display_cart_page' );
-		$this->loader->add_shortcode('agpta_checkout_page', $agpta_shopping_cart, 'agpta_display_checkout_page');
+		$this->loader->add_shortcode( 'agpta_checkout_page', $agpta_shopping_cart, 'agpta_display_checkout_page' );
 		$this->loader->add_shortcode( 'agpta_add_to_cart', $agpta_shopping_cart, 'agpta_add_to_cart_shortcode' );
 
 		$this->loader->add_action( 'init', $agpta_webhooks, 'init' );
@@ -234,23 +232,17 @@ class Agpta {
 		$this->loader->add_action( 'admin_post_nopriv_agpta_contact_form', $agpta_contact_form, 'agpta_contact_form_submission' );
 		$this->loader->add_shortcode( 'agpta_contact_form', $agpta_contact_form, 'contact_form_display_shortcode' );
 
-
-		$this->loader->add_action( 'admin_menu', $agpta_wishlist, 'agpta_wishlist_admin_page_init', 99);
+		$this->loader->add_action( 'admin_menu', $agpta_wishlist, 'agpta_wishlist_admin_page_init', 99 );
 		$this->loader->add_action( 'admin_post_agpta_wishlist_add_new', $agpta_wishlist, 'agpta_wishlist_add_new_handler' );
 		$this->loader->add_action( 'admin_post_agpta_wishlist_edit', $agpta_wishlist, 'agpta_wishlist_edit_handler' );
 		$this->loader->add_action( 'wp_ajax_agpta_wishlist_delete', $agpta_wishlist, 'agpta_wishlist_delete_handler' );
 		$this->loader->add_shortcode( 'agpta_wishlist_list', $agpta_wishlist, 'agpta_wishlist_display_shortcode' );
-
 
 		$this->loader->add_action( 'init', $agpta_stripe, 'agpta_stripe_init' );
 		$this->loader->add_action( 'admin_post_agpta_create_stripe_checkout_session', $agpta_stripe, 'agpta_create_stripe_checkout_session' );
 		$this->loader->add_action( 'admin_post_nopriv_agpta_create_stripe_checkout_session', $agpta_stripe, 'agpta_create_stripe_checkout_session' );
 		$this->loader->add_shortcode( 'agpta_stripe_thank_you', $agpta_stripe, 'agpta_thank_you_page_display' );
 		$this->loader->add_action( 'rest_api_init', $agpta_stripe, 'agpta_register_webhook_route' );
-
-
-
-
 	}
 
 	/**

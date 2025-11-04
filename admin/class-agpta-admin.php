@@ -110,4 +110,47 @@ class Agpta_Admin {
 			esc_html( $message )
 		);
 	}
+
+	/**
+	 * Check Admin Nonce
+	 *
+	 * Redirect back to slug if nonce fails.
+	 *
+	 * @param  string $slug url to be redirected.
+	 *
+	 * @return void
+	 */
+	public function agpta_wishlist_edit_page_verification_check() {
+		$page = 'agpta-wishlists';
+		if ( isset( $_GET['page'] ) && $_GET['page'] === $page . '-edit' ) {
+			if ( ! current_user_can( 'manage_options' ) ) {
+				$args = array(
+					'status'  => 'error',
+					'message' => rawurlencode( 'You do not have permission to view this page.' ),
+				);
+				wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php?page=' . $page ) ) );
+				exit;
+			}
+
+			if ( ! isset( $_GET['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['nonce'] ) ), 'agpta_admin_nonce' ) ) {
+				$referer = admin_url( 'admin.php?page=' . $page );
+				$args    = array(
+					'status'  => 'error',
+					'message' => rawurlencode( 'You do not have permission to view this page.' ),
+				);
+				wp_safe_redirect( add_query_arg( $args, $referer ) );
+				exit;
+			}
+
+			if ( empty( $_GET['id'] ) ) {
+				$referer = admin_url( 'admin.php?page=' . $page );
+				$args    = array(
+					'status'  => 'error',
+					'message' => rawurlencode( 'Missing Wishlist ID.' ),
+				);
+				wp_safe_redirect( add_query_arg( $args, $referer ) );
+				exit;
+			}
+		}
+	}
 }
