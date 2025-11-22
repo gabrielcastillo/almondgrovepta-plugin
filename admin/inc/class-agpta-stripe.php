@@ -15,27 +15,71 @@ use Stripe\Stripe;
 
 class AGPTA_Stripe {
 
+	/**
+	 * Plugin Name
+	 *
+	 * @var string
+	 */
 	public string $plugin_name;
 
+	/**
+	 * Plugin Version
+	 *
+	 * @var string
+	 */
 	public string $plugin_version;
 
+	/**
+	 * Strip Private Key
+	 *
+	 * @var string|mixed
+	 */
 	public string $stripe_key;
 
+	/**
+	 * WP Settings Options
+	 *
+	 * @var array|false|mixed|void
+	 */
 	private array $options;
 
-	public function __construct( $plugin_name, $plugin_version ) {
+	/**
+	 * Database Object
+	 *
+	 * @var wpdb
+	 */
+	private wpdb $db;
+
+	/**
+	 * Constructor
+	 *
+	 * @param string $plugin_name plugin name.
+	 * @param string $plugin_version plugin version.
+	 */
+	public function __construct( string $plugin_name, string $plugin_version ) {
+		global $wpdb;
+
 		$this->plugin_name    = $plugin_name;
 		$this->plugin_version = $plugin_version;
-
-		$this->options = get_option( 'agpta_settings', array() );
-
-		$this->stripe_key = ( $this->options['enable_stripe_test'] ) ? $this->options['test_secret_key'] : $this->options['live_secret_key'];
+		$this->options        = get_option( 'agpta_settings', array() );
+		$this->stripe_key     = ( $this->options['enable_stripe_test'] ) ? $this->options['test_secret_key'] : $this->options['live_secret_key'];
+		$this->db             = $wpdb;
 	}
 
-	public function agpta_stripe_init() {
+	/**
+	 * Initialize Stripe Class
+	 *
+	 * @return void
+	 */
+	public function agpta_stripe_init(): void {
 	}
 
-	public function agpta_create_stripe_checkout_session() {
+	/**
+	 * Create Strip Checkout Session
+	 *
+	 * @return void
+	 */
+	public function agpta_create_stripe_checkout_session(): void {
 		if ( empty( $_SESSION['cart'] ) ) {
 			wp_safe_redirect( home_url( '/cart' ) );
 			exit;
@@ -86,6 +130,11 @@ class AGPTA_Stripe {
 		}
 	}
 
+	/**
+	 * Register Stripe Webhook
+	 *
+	 * @return void
+	 */
 	public function agpta_register_webhook_route() {
 		register_rest_route(
 			'agpta-stripe/v1',
@@ -98,9 +147,17 @@ class AGPTA_Stripe {
 		);
 	}
 
-	public function agpta_handle_stripe_webhook( $request ): WP_Error|WP_REST_Response|WP_HTTP_Response {
+	/**
+	 * Handle Stripe Webhook Request
+	 *
+	 * @param object $request stripe request data.
+	 *
+	 * @return WP_Error|WP_REST_Response|WP_HTTP_Response
+	 * @throws ApiErrorException Stripe api error exception.
+	 */
+	public function agpta_handle_stripe_webhook( object $request ): WP_Error|WP_REST_Response|WP_HTTP_Response {
 		$payload         = $request->get_body();
-		$sig_header      = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
+		$sig_header      = isset( $_SERVER['HTTP_STRIPE_SIGNATURE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_STRIPE_SIGNATURE'] ) ) : '';
 		$endpoint_secret = $this->options['webhook_secret'];
 
 		try {
@@ -113,41 +170,62 @@ class AGPTA_Stripe {
 			return new WP_Error( 'stripe_error', $e->getMessage(), array( 'status' => 400 ) );
 		}
 
-		if ( $event->type === 'checkout.session.completed' ) {
+		if ( 'checkout.session.completed' === $event->type ) {
 			$this->handle_successful_payment( $event );
-		} elseif ( $event->type === 'payment_intent.payment_failed' ) {
+		} elseif ( 'payment_intent.payment_failed' === $event->type ) {
 			$this->handle_failed_payment( $event );
 		}
 
 		return rest_ensure_response( array( 'status' => 'success' ) );
 	}
 
+	/**
+	 * Handle Success Payment Event
+	 *
+	 * @param array $event event data.
+	 *
+	 * @return void
+	 * @throws ApiErrorException Stripe api error exception.
+	 */
 	private function handle_successful_payment( $event ) {
 		$session = $event->data->object;
 
-		// Fetch line items
+		// Fetch line items.
 		$line_items = \Stripe\Checkout\Session::allLineItems( $session->id );
 
-		// Save to DB
+		// Save to DB.
 		$this->save_transaction_data( $session, $line_items );
 
-		// Send invoice email
+		// Send invoice email.
 		$this->send_invoice_email( $session->customer_email, $session, $line_items );
 	}
 
+	/**
+	 * Handle failed payment request
+	 *
+	 * @param object $event event data.
+	 *
+	 * @return void
+	 */
+	private function handle_failed_payment( object $event ): void {
+		$session_data   = $event->data->object;
+		$session_id     = $session_data->id;
+		$user_email     = $session_data->customer_email;
+		$payment_intent = $session_data->payment_intent;
 
-	private function handle_failed_payment( $event ) {
-		$session        = $event->data->object;
-		$session_id     = $session->id;
-		$user_email     = $session->customer_email;
-		$payment_intent = $session->payment_intent;
-
-		// You can now save the transaction info in the database
-		$this->save_transaction_data( $session );
+		// You can now save the transaction info in the database.
+		$this->save_transaction_data( $session_data );
 	}
 
-	public function save_transaction_data( $session, $line_items ) {
-		global $wpdb;
+	/**
+	 * Save Transaction To Database
+	 *
+	 * @param object $session session data.
+	 * @param array  $line_items order line items.
+	 *
+	 * @return void
+	 */
+	public function save_transaction_data( object $session, array $line_items ): void {
 
 		$events = array();
 		if ( $line_items && isset( $line_items->data ) ) {
@@ -160,8 +238,8 @@ class AGPTA_Stripe {
 			}
 		}
 
-		$wpdb->insert(
-			"{$wpdb->prefix}ticket_transactions",
+		$this->db->insert(
+			"{$this->db->prefix}ticket_transactions",
 			array(
 				'user_email'     => sanitize_email( $session->customer_email ),
 				'event_ids'      => wp_json_encode( $events ),
@@ -174,7 +252,16 @@ class AGPTA_Stripe {
 		);
 	}
 
-	public function send_invoice_email( $user_email, $session, $line_items ) {
+	/**
+	 * Send Invoice Email
+	 *
+	 * @param string $user_email user email.
+	 * @param object $session order session data.
+	 * @param array  $line_items order line items.
+	 *
+	 * @return void
+	 */
+	public function send_invoice_email( string $user_email, object $session, array $line_items ): void {
 
 		$subject  = 'Your Ticket Invoice';
 		$message  = "Thank you for your purchase!\n\n";
@@ -190,14 +277,19 @@ class AGPTA_Stripe {
 		wp_mail( $user_email, $subject, $message );
 	}
 
-	public function agpta_thank_you_page_display() {
-		$session_id = isset( $_GET['session_id'] ) ? sanitize_text_field( $_GET['session_id'] ) : '';
+	/**
+	 * Display Thank You, Page.
+	 *
+	 * @return string
+	 */
+	public function agpta_thank_you_page_display(): string {
+		$session_id = isset( $_GET['session_id'] ) ? sanitize_text_field( wp_unslash( $_GET['session_id'] ) ) : '';
 
 		if ( ! $session_id ) {
 			return '<p>Thank you for your purchase!</p>';
 		}
 
-		// Retrieve the session details from Stripe (if necessary)
+		// Retrieve the session details from Stripe (if necessary).
 		Stripe::setApiKey( $this->stripe_key );
 		try {
 			$session    = \Stripe\Checkout\Session::retrieve( $session_id );
@@ -211,7 +303,7 @@ class AGPTA_Stripe {
 		<div class="thank-you-page max-w-lg mx-auto p-4 bg-white border border-gray-300 rounded-lg shadow-lg">
 			<h2 class="text-2xl font-semibold mb-4">Thank You for Your Purchase!</h2>
 			<p>We've received your payment and your tickets are confirmed.</p>
-			<p>Your receipt has been sent to <strong><?php echo $user_email; ?></strong>.</p>
+			<p>Your receipt has been sent to <strong><?php echo esc_html( $user_email ); ?></strong>.</p>
 		</div>
 		<?php
 		return ob_get_clean();
