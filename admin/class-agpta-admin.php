@@ -81,8 +81,7 @@ class Agpta_Admin {
 			)
 		);
 	}
-
-
+	
 	/**
 	 * Admin Notices.
 	 *

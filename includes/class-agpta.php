@@ -125,6 +125,8 @@ class Agpta {
 		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-shopping-cart.php';
 
 		require_once plugin_dir_path( __DIR__ ) . 'public/includes/shortcodes.php';
+		
+		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-template-engine.php';
 
 		/**
 		 * The class responsible for orchestrating the actions and filters of the
@@ -186,7 +188,8 @@ class Agpta {
 		$agpta_webhooks      = new AGPTA_Webhooks( $this->get_plugin_name(), $this->get_version() );
 		$agpta_contact_form  = new AGPTA_ContactForm( $this->get_plugin_name(), $this->get_version() );
 		$agpta_wishlist      = new AGPTA_Wishlist( $this->get_plugin_name(), $this->get_version(), $wpdb );
-		$agpta_stripe        = new Agpta_Stripe( $this->get_plugin_name(), $this->get_version() );
+		$template_engine     = new AGPTA_Template_Engine(plugin_dir_path( __DIR__ ) . 'admin/partials/templates/emails/');
+		$agpta_stripe        = new Agpta_Stripe( $this->get_plugin_name(), $this->get_version(), $wpdb, $template_engine );
 		$agpta_shopping_cart = new AGPTA_ShoppingCart( $this->get_plugin_name(), $this->get_version(), $wpdb );
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
@@ -237,8 +240,7 @@ class Agpta {
 		$this->loader->add_action( 'admin_post_agpta_wishlist_edit', $agpta_wishlist, 'agpta_wishlist_edit_handler' );
 		$this->loader->add_action( 'wp_ajax_agpta_wishlist_delete', $agpta_wishlist, 'agpta_wishlist_delete_handler' );
 		$this->loader->add_shortcode( 'agpta_wishlist_list', $agpta_wishlist, 'agpta_wishlist_display_shortcode' );
-
-		$this->loader->add_action( 'init', $agpta_stripe, 'agpta_stripe_init' );
+		
 		$this->loader->add_action( 'admin_post_agpta_create_stripe_checkout_session', $agpta_stripe, 'agpta_create_stripe_checkout_session' );
 		$this->loader->add_action( 'admin_post_nopriv_agpta_create_stripe_checkout_session', $agpta_stripe, 'agpta_create_stripe_checkout_session' );
 		$this->loader->add_shortcode( 'agpta_stripe_thank_you', $agpta_stripe, 'agpta_thank_you_page_display' );
@@ -258,6 +260,8 @@ class Agpta {
 
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
+		
+		$this->loader->add_action( 'init', $plugin_public, 'agpta_track_email' );
 	}
 
 	/**

@@ -6,12 +6,12 @@
  * Copyright (c) 2025.
  */
 
-
 use Stripe\Charge;
 use Stripe\Exception\ApiErrorException;
 use Stripe\Exception\CardException;
 use Stripe\Refund;
 use Stripe\Stripe;
+
 
 class AGPTA_Stripe {
 
@@ -50,29 +50,23 @@ class AGPTA_Stripe {
 	 */
 	private wpdb $db;
 
+	private object $template_engine;
+
 	/**
 	 * Constructor
 	 *
 	 * @param string $plugin_name plugin name.
 	 * @param string $plugin_version plugin version.
 	 */
-	public function __construct( string $plugin_name, string $plugin_version ) {
-		global $wpdb;
-
-		$this->plugin_name    = $plugin_name;
-		$this->plugin_version = $plugin_version;
-		$this->options        = get_option( 'agpta_settings', array() );
-		$this->stripe_key     = ( $this->options['enable_stripe_test'] ) ? $this->options['test_secret_key'] : $this->options['live_secret_key'];
-		$this->db             = $wpdb;
+	public function __construct( string $plugin_name, string $plugin_version, $wpdb, $template_engine ) {
+		$this->plugin_name     = $plugin_name;
+		$this->plugin_version  = $plugin_version;
+		$this->options         = get_option( 'agpta_settings', array() );
+		$this->stripe_key      = ( $this->options['enable_stripe_test'] ) ? $this->options['test_secret_key'] : $this->options['live_secret_key'];
+		$this->db              = $wpdb;
+		$this->template_engine = $template_engine;
 	}
 
-	/**
-	 * Initialize Stripe Class
-	 *
-	 * @return void
-	 */
-	public function agpta_stripe_init(): void {
-	}
 
 	/**
 	 * Create Strip Checkout Session
@@ -116,10 +110,9 @@ class AGPTA_Stripe {
 				)
 			);
 
-			wp_redirect( $checkout_session->url );
+			wp_safe_redirect( $checkout_session->url );
 			exit;
 		} catch ( \Exception $e ) {
-			error_log( 'Stripe checkout session creation failed: ' . $e->getMessage() );
 			$args = array(
 				'payment_error' => 1,
 				'status'        => 'error',
@@ -143,61 +136,126 @@ class AGPTA_Stripe {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'agpta_handle_stripe_webhook' ),
 				'permission_callback' => '__return_true',
-			)
+			),
+			true
 		);
 	}
 
 	/**
 	 * Handle Stripe Webhook Request
 	 *
-	 * @param object $request stripe request data.
+	 * @param  WP_REST_Request $request  stripe request data.
 	 *
 	 * @return WP_Error|WP_REST_Response|WP_HTTP_Response
-	 * @throws ApiErrorException Stripe api error exception.
 	 */
-	public function agpta_handle_stripe_webhook( object $request ): WP_Error|WP_REST_Response|WP_HTTP_Response {
-		$payload         = $request->get_body();
-		$sig_header      = isset( $_SERVER['HTTP_STRIPE_SIGNATURE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_STRIPE_SIGNATURE'] ) ) : '';
+	public function agpta_handle_stripe_webhook( WP_REST_Request $request ): WP_Error|WP_REST_Response|WP_HTTP_Response {
+
+		\Stripe\Stripe::setApiKey( $this->stripe_key );
+		$payload = $request->get_body();
+		$event   = null;
+
+		if ( ! $payload ) {
+			return new WP_Error( 'stripe_error', 'Empty payload', array( 'status' => 400 ) );
+		}
+
+		$sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
+
+		if ( empty( $sig_header ) ) {
+			return new WP_Error( 'stripe_error', 'Missing signature', array( 'status' => 400 ) );
+		}
+
 		$endpoint_secret = $this->options['webhook_secret'];
 
-		try {
-			$event = \Stripe\Webhook::constructEvent(
-				$payload,
-				$sig_header,
-				$endpoint_secret
-			);
-		} catch ( \Exception $e ) {
-			return new WP_Error( 'stripe_error', $e->getMessage(), array( 'status' => 400 ) );
+		if ( empty( $endpoint_secret ) ) {
+			return new WP_Error( 'stripe_error', 'Webhook secret not configured', array( 'status' => 500 ) );
 		}
 
-		if ( 'checkout.session.completed' === $event->type ) {
-			$this->handle_successful_payment( $event );
-		} elseif ( 'payment_intent.payment_failed' === $event->type ) {
-			$this->handle_failed_payment( $event );
+		if ( $endpoint_secret ) {
+			$sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
+			try {
+				$event = \Stripe\Webhook::constructEvent(
+					$payload,
+					$sig_header,
+					$endpoint_secret
+				);
+			} catch ( \Stripe\Exception\SignatureVerificationException $e ) {
+				return new WP_Error( "Stripe Signature Error: {$e->getMessage()}", array( 'status' => 400 ) );
+			}
 		}
 
-		return rest_ensure_response( array( 'status' => 'success' ) );
+		switch ( $event->type ) {
+			case 'checkout.session.completed':
+				$this->handle_successful_payment( $event, $request->get_body() );
+				break;
+
+			case 'payment_intent.payment_failed':
+			case 'checkout.session.async_payment_failed':
+				$this->handle_failed_payment( $event );
+				break;
+
+			default:
+				// Log unhandled events but return 200 OK
+				// error_log( "AGPTA Stripe: unhandled event type {$event->type}" );
+				break;
+		}
+
+		return rest_ensure_response( array( 'status' => 'ok' ) );
 	}
 
 	/**
-	 * Handle Success Payment Event
+	 * Handle Successful Payment
 	 *
-	 * @param array $event event data.
+	 * @param  object $event         stripe event.
+	 * @param  string $request_body  request body object.
 	 *
 	 * @return void
-	 * @throws ApiErrorException Stripe api error exception.
 	 */
-	private function handle_successful_payment( $event ) {
-		$session = $event->data->object;
+	private function handle_successful_payment( object $event, string $request_body ): void {
 
-		// Fetch line items.
-		$line_items = \Stripe\Checkout\Session::allLineItems( $session->id );
+		\Stripe\Stripe::setApiKey( $this->stripe_key );
 
-		// Save to DB.
-		$this->save_transaction_data( $session, $line_items );
+		$session_data = $event->data->object;
 
-		// Send invoice email.
-		$this->send_invoice_email( $session->customer_email, $session, $line_items );
+		// Try to retrieve the real session with line items.
+		try {
+			$session    = \Stripe\Checkout\Session::retrieve(
+				array(
+					'id'     => $session_data->id,
+					'expand' => array( 'line_items' ),
+				)
+			);
+			$line_items = $session->line_items;
+		} catch ( \Stripe\Exception\ApiErrorException $e ) {
+			// Stripe CLI synthetic session → fallback.
+			error_log( 'Stripe CLI synthetic session: ' . $e->getMessage() );
+
+			$session    = $session_data;
+			$line_items = (object) array( 'data' => array() );
+
+			$req = json_decode( $request_body, true );
+			if ( ! empty( $req['data']['object']['customer_details'] ) ) {
+				// Ensure we have an object.
+				$session->customer_details = (object) $req['data']['object']['customer_details'];
+
+				// Convert address to object if it's an array.
+				if ( isset( $session->customer_details->address ) && is_array( $session->customer_details->address ) ) {
+					$session->customer_details->address = (object) $session->customer_details->address;
+				}
+			}
+		}
+
+		// -------------------------------
+		// Save customer & transaction data
+		// -------------------------------
+		$this->save_full_transaction_data( $session, $line_items );
+
+		// -------------------------------
+		// Send invoice email
+		// -------------------------------
+		$customer_email = $session->customer_email ?? $session->customer_details->email ?? '';
+		if ( $customer_email ) {
+			$this->send_invoice_email( $customer_email, $session, $line_items );
+		}
 	}
 
 	/**
@@ -212,69 +270,121 @@ class AGPTA_Stripe {
 		$session_id     = $session_data->id;
 		$user_email     = $session_data->customer_email;
 		$payment_intent = $session_data->payment_intent;
-
-		// You can now save the transaction info in the database.
-		$this->save_transaction_data( $session_data );
 	}
 
-	/**
-	 * Save Transaction To Database
-	 *
-	 * @param object $session session data.
-	 * @param array  $line_items order line items.
-	 *
-	 * @return void
-	 */
-	public function save_transaction_data( object $session, array $line_items ): void {
 
-		$events = array();
-		if ( $line_items && isset( $line_items->data ) ) {
+
+	private function save_full_transaction_data( object $session, object $line_items ): void {
+
+		// Ensure customer object exists.
+		$customer = $session->customer_details ?? (object) array();
+		$address  = $customer->address ?? (object) array();
+
+		// Line items.
+		$items = array();
+		if ( ! empty( $line_items->data ) && is_array( $line_items->data ) ) {
 			foreach ( $line_items->data as $item ) {
-				$events[] = array(
-					'name'     => $item->description,
-					'quantity' => $item->quantity,
-					'amount'   => $item->amount_total / 100,
+				$items[] = array(
+					'name'     => $item->description ?? '',
+					'quantity' => $item->quantity ?? 1,
+					'amount'   => isset( $item->amount_total ) ? $item->amount_total / 100 : 0,
 				);
 			}
 		}
 
+		$line_items_json = wp_json_encode( $items );
+
+		// Insert into database safely.
 		$this->db->insert(
-			"{$this->db->prefix}ticket_transactions",
+			"{$this->db->prefix}agpta_stripe_transactions",
 			array(
-				'user_email'     => sanitize_email( $session->customer_email ),
-				'event_ids'      => wp_json_encode( $events ),
-				'total_amount'   => (float) ( $session->amount_total / 100 ),
-				'transaction_id' => sanitize_text_field( $session->payment_intent ),
-				'status'         => sanitize_text_field( $session->payment_status ),
-				'customer_id'    => sanitize_text_field( $session->customer ),
+				'user_email'     => sanitize_email( $customer->email ?? '' ),
+				'user_name'      => sanitize_text_field( $customer->name ?? '' ),
+				'user_phone'     => sanitize_text_field( $customer->phone ?? '' ),
+				'address_line1'  => sanitize_text_field( $address->line1 ?? '' ),
+				'address_line2'  => sanitize_text_field( $address->line2 ?? '' ),
+				'city'           => sanitize_text_field( $address->city ?? '' ),
+				'state'          => sanitize_text_field( $address->state ?? '' ),
+				'postal_code'    => sanitize_text_field( $address->postal_code ?? '' ),
+				'country'        => sanitize_text_field( $address->country ?? '' ),
+				'transaction_id' => sanitize_text_field( $session->payment_intent ?? '' ),
+				'total_amount'   => (float) ( ( $session->amount_total ?? 0 ) / 100 ),
+				'subtotal'       => (float) ( ( $session->amount_subtotal ?? 0 ) / 100 ),
+				'currency'       => sanitize_text_field( $session->currency ?? 'usd' ),
+				'payment_status' => sanitize_text_field( $session->payment_status ?? '' ),
+				'line_items'     => $line_items_json,
 				'created_at'     => current_time( 'mysql' ),
 			)
 		);
 	}
+
+
 
 	/**
 	 * Send Invoice Email
 	 *
 	 * @param string $user_email user email.
 	 * @param object $session order session data.
-	 * @param array  $line_items order line items.
-	 *
-	 * @return void
+	 * @param object $line_items order line items.
 	 */
-	public function send_invoice_email( string $user_email, object $session, array $line_items ): void {
+	public function send_invoice_email( string $user_email, object $session, object $line_items ) {
 
-		$subject  = 'Your Ticket Invoice';
-		$message  = "Thank you for your purchase!\n\n";
-		$message .= "Transaction ID: {$session->payment_intent}\n";
-		$message .= 'Total: $' . number_format( $session->amount_total / 100, 2 ) . "\n\n";
+		try {
 
-		foreach ( $line_items->data as $item ) {
-			$message .= "Event: {$item->description}\n";
-			$message .= "Quantity: {$item->quantity}\n";
-			$message .= 'Subtotal: $' . number_format( $item->amount_total / 100, 2 ) . "\n\n";
+			$subject  = 'Your Invoice';
+			$message  = "Thank you for your purchase!\n\n";
+			$message .= "Transaction ID: {$session->payment_intent}\n";
+			$message .= 'Total: $' . number_format( ( $session->amount_total ?? 0 ) / 100, 2 ) . "\n\n";
+
+			if ( ! empty( $line_items->data ) ) {
+				foreach ( $line_items->data as $item ) {
+					$message .= "Event: {$item->description}\n";
+					$message .= "Quantity: {$item->quantity}\n";
+					$message .= 'Subtotal: $' . number_format( ( $item->amount_total ?? 0 ) / 100, 2 ) . "\n\n";
+				}
+			}
+
+			// Billing address.
+			if ( ! empty( $session->customer_details ) ) {
+				$customer = $session->customer_details;
+				$address  = $customer->address ?? (object) array();
+				$message .= 'Name: ' . $customer->name . "\n";
+				if ( $address ) {
+
+					$message .= "Billing Address:\n";
+					$message .= ( $address->line1 ?? '' ) . ' ' . ( $address->line2 ?? '' ) . "\n";
+					$message .= ( $address->city ?? '' ) . ', ' . ( $address->state ?? '' ) . ' ' . ( $address->postal_code ?? '' ) . "\n";
+					$message .= ( $address->country ?? '' ) . "\n\n";
+				}
+				$this->template_engine->customer_name = $customer->name;
+				$to                                   = $customer->name . "<$user_email>";
+			}
+
+			$this->template_engine->plugin_name  = $this->plugin_name;
+			$this->template_engine->site_name    = get_bloginfo( 'name' );
+			$this->template_engine->site_url     = get_bloginfo( 'url' );
+			$this->template_engine->message_body = $message;
+			$this->template_engine->page_title   = get_bloginfo( 'name' ) . ' | Transaction # ' . $session->payment_intent;
+
+			ob_start();
+			$this->template_engine->render( 'stripe-success.php' );
+			$contents = ob_get_clean();
+
+			$headers = array(
+				'Content-Type: text/html; charset=UTF-8',
+				'From: Almond Grove PTA <no-reply@ptasite.test>',
+				'Reply-To: Almond Grove PTA <no-reply@ptasite.test>',
+			);
+
+			$sent = wp_mail( $to, $subject, $contents, $headers );
+
+			if ( ! $sent ) {
+				throw new RuntimeException( 'wp_mail() failed.' );
+			}
+		} catch ( Exception $e ) {
+			error_log( 'Message Failed: ' . $e->getMessage() );
+			return new WP_Error( 'stripe_error', $e->getMessage(), array( 'status' => 400 ) );
 		}
-
-		wp_mail( $user_email, $subject, $message );
 	}
 
 	/**

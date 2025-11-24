@@ -29,7 +29,7 @@
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
-
+require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 /**
  * Currently plugin version.
  * Start at version 1.0.0 and use SemVer - https://semver.org
@@ -65,7 +65,7 @@ register_deactivation_hook( __FILE__, 'deactivate_agpta' );
  */
 require plugin_dir_path( __FILE__ ) . 'includes/class-agpta.php';
 
-require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
+//require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 
 /**
  * Begins execution of the plugin.
@@ -78,8 +78,10 @@ require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
  */
 function run_agpta() {
 
-	if ( ! session_id() ) {
-		session_start();
+	if ( ! headers_sent() ) {
+		if ( ! session_id() ) {
+			session_start();
+		}
 	}
 
 	$plugin = new Agpta();

@@ -108,4 +108,25 @@ class Agpta_Public {
 			)
 		);
 	}
+	
+	final public function agpta_track_email(): void
+	{
+		if ( isset( $_GET['logo'] ) ) {
+			header('Content-Type: image/jpg');
+			readfile(plugin_dir_path( __DIR__ ) . 'public/images/logo.jpeg' );
+			
+			$logDir = plugin_dir_path( __DIR__ ) . 'admin/logs';
+			if ( ! file_exists($logDir) && ! mkdir($logDir, 0744) && ! is_dir($logDir)) {
+				throw new \RuntimeException(sprintf('Directory "%s" was not created', $logDir));
+			}
+			
+			$logFile    = fopen($logDir . '/email.log', 'ab') or dir("Unable to open file");
+			$date       = gmdate('Y-m-d H:i:s', time());
+			$ip         = $_SERVER['REMOTE_ADDR'];
+			$entry      = 'Opened at ' . $date . ' from IP ' . $ip . ' UUID ' . sanitize_text_field($_GET['logo']) . PHP_EOL;
+			
+			fwrite($logFile, $entry);
+			fclose($logFile);
+		}
+	}
 }

@@ -323,7 +323,9 @@ class AGPTA_Wishlist {
 		if ( isset( $_POST['staff_list_description'] ) ) {
 			$_SESSION['agpta_form_data']['post']['staff_list_description'] = sanitize_textarea_field( wp_unslash( $_POST['staff_list_description'] ) );
 		}
-
+        
+        session_write_close();
+        
 		if ( 1 === $has_errors ) {
 			$args = array(
 				'page'    => $this->page_slug . '-new',

@@ -340,6 +340,8 @@ class AGPTA_ShoppingCart {
 				'qty'      => $quantity,
 				'price'    => $ticket_price,
 			);
+            
+            session_write_close();
 			// Redirect to cart page.
 			wp_safe_redirect( home_url( '/cart' ) );
 			exit;
@@ -390,7 +392,8 @@ class AGPTA_ShoppingCart {
 				$_SESSION['cart'] = array_values( $_SESSION['cart'] );
 			}
 		}
-
+        
+        session_write_close();
 		wp_safe_redirect( home_url( '/cart' ) );
 		exit;
 	}
