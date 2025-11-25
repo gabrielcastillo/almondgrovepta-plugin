@@ -158,12 +158,12 @@ class AGPTA_ShoppingCart {
 									$quantity          = $item['qty'];
 									$price             = number_format( ( $item['price'] * $quantity ), 2 );
 									$this->cart_total += (float) $price;
+                                    $thumbnail_url = ( has_post_thumbnail( $event->ID ) ) ? get_the_post_thumbnail_url( $event->ID ) : wp_get_attachment_url( get_theme_mod( 'custom_logo' ) );
+                                    
 									?>
 									<li class="flex py-6">
 										<div class="shrink-0">
-											<img src="https://tailwindcss.com/plus-assets/img/ecommerce-images/checkout-page-03-product-04.jpg"
-												alt="Front side of mint cotton t-shirt with wavey lines pattern."
-												class="size-24 rounded-md object-cover sm:size-32"/>
+                                            <img src="<?php echo esc_url( $thumbnail_url ); ?>" alt="Front side of mint cotton t-shirt with wavey lines pattern." class="size-24 rounded-md object-cover sm:size-32"/>
 										</div>
 
 										<div class="ml-4 flex flex-1 flex-col sm:ml-6">
