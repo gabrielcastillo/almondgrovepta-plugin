@@ -127,6 +127,8 @@ class Agpta {
 		require_once plugin_dir_path( __DIR__ ) . 'public/includes/shortcodes.php';
 		
 		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-template-engine.php';
+		
+		require_once plugin_dir_path( __DIR__ ) . 'admin/inc/class-agpta-calendar.php';
 
 		/**
 		 * The class responsible for orchestrating the actions and filters of the
@@ -191,6 +193,7 @@ class Agpta {
 		$template_engine     = new AGPTA_Template_Engine(plugin_dir_path( __DIR__ ) . 'admin/partials/templates/emails/');
 		$agpta_stripe        = new Agpta_Stripe( $this->get_plugin_name(), $this->get_version(), $wpdb, $template_engine );
 		$agpta_shopping_cart = new AGPTA_ShoppingCart( $this->get_plugin_name(), $this->get_version(), $wpdb );
+		$agpta_calendar      = new AGPTA_Calendar( $this->get_plugin_name(), $wpdb );
 
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
@@ -245,6 +248,12 @@ class Agpta {
 		$this->loader->add_action( 'admin_post_nopriv_agpta_create_stripe_checkout_session', $agpta_stripe, 'agpta_create_stripe_checkout_session' );
 		$this->loader->add_shortcode( 'agpta_stripe_thank_you', $agpta_stripe, 'agpta_thank_you_page_display' );
 		$this->loader->add_action( 'rest_api_init', $agpta_stripe, 'agpta_register_webhook_route' );
+		
+		$this->loader->add_action( 'init', $agpta_calendar, 'init' );
+		$this->loader->add_action( 'add_meta_boxes', $agpta_calendar, 'add_calendar_meta_box' );
+		$this->loader->add_action( 'save_post', $agpta_calendar, 'agpta_save_calendar_date_meta' );
+		$this->loader->add_action( 'save_post', $agpta_calendar, 'agpta_save_calendar_status_meta' );
+		
 	}
 
 	/**

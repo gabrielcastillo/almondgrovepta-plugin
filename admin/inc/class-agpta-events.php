@@ -159,13 +159,14 @@ class AGPTA_Events {
 			'show_ui'            => true,
 			'show_in_menu'       => true,
 			'query_var'          => true,
-			'rewrite'            => array( 'slug' => 'pta-events' ),
-			'capability_type'    => 'page',
-			'has_archive'        => true,
+			'rewrite'            => array( 'slug' => 'agpta-events' ),
+			'capability_type'    => 'post',
+			'has_archive'        => 'agpta-events',
 			'hierarchical'       => false,
 			'menu_position'      => 5,
 			'supports'           => array( 'title', 'editor', 'author', 'thumbnail', 'revisions', 'excerpt' ),
 			'show_in_rest'       => true,
+			'menu_icon'          => 'dashicons-calendar-alt',
 		);
 
 		register_post_type( 'pta_events', $args );
@@ -181,8 +182,14 @@ class AGPTA_Events {
 			)
 		);
 	}
-
-	public function agpta_get_pta_events() {
+	
+	/**
+	 * Get Events Query
+	 *
+	 * @return void
+	 */
+	public function agpta_get_pta_events(): void
+	{
 		$events = get_posts(
 			array(
 				'post_type'      => 'pta_events',
@@ -203,5 +210,4 @@ class AGPTA_Events {
 
 		wp_send_json( $data );
 	}
-
 }
